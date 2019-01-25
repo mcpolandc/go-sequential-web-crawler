@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"os"
-	"strings"
 
 	"golang.org/x/net/html"
 )
@@ -26,14 +26,10 @@ func Fetch(resp *http.Response, domain string) (urls []string, err error) {
 
 			//    2A. find anchor type elements
 			if token.Data == "a" {
-				//    2B. iterate over anchors to find hrefs
+				//    2B. iterate over anchors to eligible links
 				for _, attr := range token.Attr {
-					if attr.Key == "href" {
-						//    2C. ensure href is an internal link
-						if !strings.HasPrefix(attr.Val, "http") {
-							//    2D. save link to urls slice
-							urls = append(urls, prependDomain(attr.Val, domain))
-						}
+					if isEligibleLink(attr) {
+						urls = append(urls, PrependDomain(attr.Val, domain))
 					}
 				}
 			}
@@ -46,14 +42,11 @@ func Fetch(resp *http.Response, domain string) (urls []string, err error) {
 	}
 }
 
-// util
-func prependDomain(route string, domain string) (url string) {
-	if strings.HasPrefix(route, "http") {
-		url = route
-	} else {
-		url = fmt.Sprintf("%s%s", domain, route)
-	}
-	return url
+func isEligibleLink(attr html.Attribute) bool {
+	return IsHref(attr) &&
+		IsInternalLink(attr.Val) &&
+		!IsSamePageLink(attr.Val) &&
+		!IsScriptLink(attr.Val)
 }
 
 // Crawler - interface describing behaviour of crawler
@@ -64,18 +57,22 @@ type Crawler interface {
 // CrawlerImpl - an implementation of the Crawler interface
 type CrawlerImpl struct {
 	domain      string
-	data        map[string]*result
-	crawledUrls []string
+	data        map[string]*CrawlResult
+	crawledUrls map[string]bool // using a map for performance reasons (O(1))
 }
 
-type result struct {
+// CrawlResult - store links associated with a url
+type CrawlResult struct {
 	links []string
 }
 
 // Crawl - recursively crawl given urls
-func (webCrawler *CrawlerImpl) Crawl(url string) error {
+func (crawlerPtr *CrawlerImpl) Crawl(url string) error {
 
-	fullURL := prependDomain(url, webCrawler.domain)
+	log.Printf("Crawling %s\n", url)
+
+	webCrawler := *crawlerPtr
+	fullURL := PrependDomain(url, webCrawler.domain)
 
 	// 1. fetch html from url
 	resp, err := http.Get(fullURL)
@@ -84,27 +81,28 @@ func (webCrawler *CrawlerImpl) Crawl(url string) error {
 	}
 
 	// 2. get slice of urls from html
-	foundsUrls, err := Fetch(resp, (*webCrawler).domain)
+	foundsUrls, err := Fetch(resp, webCrawler.domain)
 	if err != nil {
 		return err
 	}
 
 	// 3. add url to list of already crawled
-	(*webCrawler).crawledUrls = append((*webCrawler).crawledUrls, fullURL)
+	webCrawler.crawledUrls[fullURL] = true
+
+	fmt.Printf("webCrawler.crawledUrls: %v", webCrawler.crawledUrls)
 
 	// 4. add urls to map with this url as key
-	(*webCrawler).data[fullURL] = &result{links: foundsUrls}
+	webCrawler.data[fullURL] = &CrawlResult{links: foundsUrls}
 
 	// 5. iterate over slice of found urls
 	for _, link := range foundsUrls {
 		//    5A. check url has not already been crawled
 
-		if !Contains((*webCrawler).crawledUrls, link) {
-			(*webCrawler).Crawl(link)
+		if !webCrawler.crawledUrls[link] {
+			webCrawler.Crawl(link)
 		}
 	}
 
-	fmt.Printf("(*webCrawler).crawledUrls: %v", (*webCrawler).crawledUrls)
 	return err
 }
 
@@ -128,9 +126,14 @@ func main() {
 	domain := os.Args[1]
 
 	crawler := CrawlerImpl{
-		domain: os.Args[1],
-		data:   make(map[string]*result),
+		domain:      os.Args[1],
+		data:        make(map[string]*CrawlResult),
+		crawledUrls: make(map[string]bool),
 	}
 
+	log.Printf("starting to crawl %v", domain)
+
 	crawler.Crawl(domain)
+
+	log.Printf("Finished crawling. Crawled %d pages", len(crawler.data))
 }
