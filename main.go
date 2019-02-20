@@ -46,7 +46,8 @@ func isEligibleLink(attr html.Attribute) bool {
 	return IsHref(attr) &&
 		IsInternalLink(attr.Val) &&
 		!IsSamePageLink(attr.Val) &&
-		!IsScriptLink(attr.Val)
+		!IsScriptLink(attr.Val) &&
+		!IsPhoneLink(attr.Val)
 }
 
 // Crawler - interface describing behaviour of crawler
@@ -69,8 +70,6 @@ type CrawlResult struct {
 // Crawl - recursively crawl given urls
 func (crawlerPtr *CrawlerImpl) Crawl(url string) error {
 
-	log.Printf("Crawling %s\n", url)
-
 	webCrawler := *crawlerPtr
 	fullURL := PrependDomain(url, webCrawler.domain)
 
@@ -88,8 +87,6 @@ func (crawlerPtr *CrawlerImpl) Crawl(url string) error {
 
 	// 3. add url to list of already crawled
 	webCrawler.crawledUrls[fullURL] = true
-
-	fmt.Printf("webCrawler.crawledUrls: %v", webCrawler.crawledUrls)
 
 	// 4. add urls to map with this url as key
 	webCrawler.data[fullURL] = &CrawlResult{links: foundsUrls}
@@ -134,6 +131,8 @@ func main() {
 	log.Printf("starting to crawl %v", domain)
 
 	crawler.Crawl(domain)
+
+	PrintSitemap(crawler.data, domain)
 
 	log.Printf("Finished crawling. Crawled %d pages", len(crawler.data))
 }

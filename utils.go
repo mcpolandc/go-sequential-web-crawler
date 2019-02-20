@@ -27,6 +27,11 @@ func IsScriptLink(link string) bool {
 	return strings.HasPrefix(link, "/cdn-cgi")
 }
 
+// IsPhoneLink - checks if link is a telephone link
+func IsPhoneLink(link string) bool {
+	return strings.HasPrefix(link, "/tel:")
+}
+
 // PrependDomain - takes a route and adds domain if needed
 func PrependDomain(route string, domain string) (url string) {
 	if strings.HasPrefix(route, "http") {
