@@ -23,14 +23,16 @@ func main() {
 
 	log.Printf("starting to crawl %v", domain)
 
+	// thread stuff
 	var wg sync.WaitGroup
-
 	wg.Add(1)
 	defer wg.Done()
 
 	crawler.Crawl(domain, &wg)
 
 	wg.Wait()
+
+	PrintSitemap(crawler.CrawledUrls, crawler.Domain)
 
 	log.Printf("Finished crawling. Crawled %d pages", len(crawler.CrawledUrls.items))
 }
