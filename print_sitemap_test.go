@@ -3,13 +3,11 @@ package main
 import "testing"
 
 func TestMapPrettyPrint(t *testing.T) {
-	// not actually sure how to test what has been printed
-	// different approach here...
 	PrintSitemap(mockMap, "https://golang.org/")
 }
 
 // mocks & test data
-var mockMap = map[string][]string{
+var mockMap = map[string]interface{}{
 	"https://golang.org/": []string{
 		"https://golang.org/pkg/",
 		"https://golang.org/cmd/",

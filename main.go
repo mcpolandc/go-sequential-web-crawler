@@ -32,7 +32,7 @@ func main() {
 
 	wg.Wait()
 
-	PrintSitemap(crawler.CrawledUrls, crawler.Domain)
+	PrintSitemap(crawler.CrawledUrls.items, crawler.Domain)
 
 	log.Printf("Finished crawling. Crawled %d pages", len(crawler.CrawledUrls.items))
 }
