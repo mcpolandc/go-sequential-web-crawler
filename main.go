@@ -18,18 +18,19 @@ func main() {
 
 	crawler := Crawler{
 		Domain:      os.Args[1],
-		Data:        &ThreadSafeMap{items: make(map[string]interface{})},
 		CrawledUrls: &ThreadSafeMap{items: make(map[string]interface{})},
 	}
 
 	log.Printf("starting to crawl %v", domain)
 
 	var wg sync.WaitGroup
-	wg.Add(10)
+
+	wg.Add(1)
+	defer wg.Done()
 
 	crawler.Crawl(domain, &wg)
 
 	wg.Wait()
 
-	log.Printf("Finished crawling. Crawled %d pages", len(crawler.Data.items))
+	log.Printf("Finished crawling. Crawled %d pages", len(crawler.CrawledUrls.items))
 }
